@@ -12,7 +12,7 @@ const connection = new Connection(RPC_URL, "confirmed");
 
 // Programa oficial de Meteora DAMM V2
 const METEORA_PROGRAM_ID = new PublicKey(
-  "cpamdpZCGKuy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"
+  "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"
 );
 
 function formatNumber(value: number): string {
@@ -52,7 +52,6 @@ function analyzeTokenMovements(
 
   for (const balance of post) {
     const key = `${balance.accountIndex}-${balance.mint}`;
-
     const existing = movements.get(key);
 
     if (existing) {
@@ -104,7 +103,9 @@ function analyzeTokenMovements(
   }
 
   if (!foundMovement) {
-    console.log("No se detectaron movimientos de tokens.");
+    console.log(
+      "No se detectaron movimientos de tokens."
+    );
   }
 }
 
@@ -148,8 +149,41 @@ function analyzeSolMovements(
   }
 }
 
+function identifyPoolCandidates(
+  transaction: ParsedConfirmedTransaction
+): PublicKey[] {
+  const candidates: PublicKey[] = [];
+  const seen = new Set<string>();
+
+  for (
+    const instruction of
+    transaction.transaction.message.instructions
+  ) {
+    if (
+      !instruction.programId.equals(
+        METEORA_PROGRAM_ID
+      )
+    ) {
+      continue;
+    }
+
+    for (const account of instruction.accounts) {
+      const address = account.pubkey.toBase58();
+
+      if (seen.has(address)) {
+        continue;
+      }
+
+      seen.add(address);
+      candidates.push(account.pubkey);
+    }
+  }
+
+  return candidates;
+}
+
 console.log("======================================");
-console.log("       SNIPER SOLANA BOT v0.4.0");
+console.log("       SNIPER SOLANA BOT v0.5.0");
 console.log("======================================");
 console.log("Conectando a Solana...");
 console.log("Modo: OBSERVACIÓN");
@@ -164,10 +198,18 @@ connection.onLogs(
     }
 
     console.log("");
-    console.log("🚨 ACTIVIDAD METEORA DETECTADA");
-    console.log(`Firma: ${logInfo.signature}`);
-    console.log(`Slot: ${context.slot}`);
-    console.log("Analizando transacción...");
+    console.log(
+      "🚨 ACTIVIDAD METEORA DETECTADA"
+    );
+    console.log(
+      `Firma: ${logInfo.signature}`
+    );
+    console.log(
+      `Slot: ${context.slot}`
+    );
+    console.log(
+      "Analizando transacción..."
+    );
 
     try {
       const transaction =
@@ -186,7 +228,9 @@ connection.onLogs(
       }
 
       console.log("");
-      console.log("📋 CUENTAS INVOLUCRADAS:");
+      console.log(
+        "📋 CUENTAS INVOLUCRADAS:"
+      );
 
       for (
         const account of
@@ -197,14 +241,44 @@ connection.onLogs(
         );
       }
 
+      const poolCandidates =
+        identifyPoolCandidates(
+          transaction
+        );
+
+      console.log("");
+      console.log(
+        "🏊 CANDIDATAS A POOL DAMM V2:"
+      );
+
+      if (poolCandidates.length === 0) {
+        console.log(
+          "⚪ No se encontraron cuentas candidatas."
+        );
+      } else {
+        for (const candidate of poolCandidates) {
+          console.log(
+            `- ${candidate.toBase58()}`
+          );
+        }
+      }
+
       analyzeTokenMovements(transaction);
       analyzeSolMovements(transaction);
 
       console.log("");
-      console.log("======================================");
-      console.log("🔎 ESTADO: OBSERVACIÓN");
-      console.log("💰 COMPRA AUTOMÁTICA: DESACTIVADA");
-      console.log("======================================");
+      console.log(
+        "======================================"
+      );
+      console.log(
+        "🔎 ESTADO: OBSERVACIÓN"
+      );
+      console.log(
+        "💰 COMPRA AUTOMÁTICA: DESACTIVADA"
+      );
+      console.log(
+        "======================================"
+      );
 
     } catch (error) {
       console.error(
