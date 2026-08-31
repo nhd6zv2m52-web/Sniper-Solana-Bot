@@ -1,3 +1,5 @@
+import { appendFile } from "node:fs/promises";
+
 export type OpportunityDecision =
   | "ENTER"
   | "WAIT"
@@ -37,6 +39,16 @@ export function createOpportunityRecord(params: {
   };
 }
 
+export async function saveOpportunityRecord(
+  record: OpportunityRecord
+): Promise<void> {
+  await appendFile(
+    "opportunities.jsonl",
+    JSON.stringify(record) + "\n",
+    "utf8"
+  );
+}
+
 export function printOpportunityRecord(
   record: OpportunityRecord
 ): void {
@@ -52,5 +64,7 @@ export function printOpportunityRecord(
   );
   console.log(`Estrategia: ${record.strategy}`);
   console.log(`Decisión: ${record.decision}`);
-  console.log(`Motivo: ${record.reason || "pendiente"}`);
+  console.log(
+    `Motivo: ${record.reason || "pendiente"}`
+  );
 }
