@@ -29,7 +29,7 @@ connection.onLogs(
     console.log("");
     console.log("🚨 ACTIVIDAD METEORA DETECTADA");
     console.log(`Firma: ${logInfo.signature}`);
-    console.log(`Slot: ${logInfo.slot}`);
+    console.log(`Slot: ${context.slot}`);
     console.log("Analizando transacción...");
 
     try {
