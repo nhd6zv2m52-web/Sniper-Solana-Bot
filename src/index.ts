@@ -4,6 +4,11 @@ import {
   ParsedConfirmedTransaction,
 } from "@solana/web3.js";
 
+import {
+  createOpportunityRecord,
+  printOpportunityRecord,
+} from "./opportunityLogger";
+
 const RPC_URL =
   process.env.SOLANA_RPC_URL ||
   "https://api.mainnet-beta.solana.com";
@@ -57,6 +62,7 @@ function analyzeTokenMovements(
     if (existing) {
       existing.after =
         balance.uiTokenAmount.uiAmount || 0;
+
       existing.owner =
         balance.owner || existing.owner;
     } else {
@@ -144,7 +150,9 @@ function analyzeSolMovements(
       `Cuenta: ${accountKeys[i].pubkey.toBase58()}`
     );
     console.log(
-      `Cambio SOL: ${formatNumber(Math.abs(deltaSol))}`
+      `Cambio SOL: ${formatNumber(
+        Math.abs(deltaSol)
+      )}`
     );
   }
 }
@@ -167,7 +175,6 @@ function identifyPoolCandidates(
       continue;
     }
 
-    // Solo las instrucciones que exponen cuentas directamente
     if (!("accounts" in instruction)) {
       continue;
     }
@@ -188,11 +195,12 @@ function identifyPoolCandidates(
 }
 
 console.log("======================================");
-console.log("       SNIPER SOLANA BOT v0.5.0");
+console.log("       SNIPER SOLANA BOT v0.5.1");
 console.log("======================================");
 console.log("Conectando a Solana...");
 console.log("Modo: OBSERVACIÓN");
 console.log("Compra automática: DESACTIVADA");
+console.log("Registro de oportunidades: ACTIVADO");
 console.log("======================================");
 
 connection.onLogs(
@@ -206,12 +214,15 @@ connection.onLogs(
     console.log(
       "🚨 ACTIVIDAD METEORA DETECTADA"
     );
+
     console.log(
       `Firma: ${logInfo.signature}`
     );
+
     console.log(
       `Slot: ${context.slot}`
     );
+
     console.log(
       "Analizando transacción..."
     );
@@ -268,19 +279,41 @@ connection.onLogs(
         }
       }
 
-      analyzeTokenMovements(transaction);
-      analyzeSolMovements(transaction);
+      const record =
+        createOpportunityRecord({
+          slot: context.slot,
+          signature: logInfo.signature,
+          strategy: "METEORA_ONLY",
+          decision: "WAIT",
+          reason:
+            poolCandidates.length > 0
+              ? "Actividad Meteora con cuentas candidatas a Pool"
+              : "Actividad Meteora sin Pool confirmada",
+        });
+
+      printOpportunityRecord(record);
+
+      analyzeTokenMovements(
+        transaction
+      );
+
+      analyzeSolMovements(
+        transaction
+      );
 
       console.log("");
       console.log(
         "======================================"
       );
+
       console.log(
         "🔎 ESTADO: OBSERVACIÓN"
       );
+
       console.log(
         "💰 COMPRA AUTOMÁTICA: DESACTIVADA"
       );
+
       console.log(
         "======================================"
       );
