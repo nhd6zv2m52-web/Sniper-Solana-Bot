@@ -1,7 +1,6 @@
 import {
   Connection,
   PublicKey,
-  ParsedConfirmedTransaction,
 } from "@solana/web3.js";
 
 const RPC_URL =
