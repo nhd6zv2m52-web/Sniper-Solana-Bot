@@ -7,7 +7,7 @@ import {
 import {
   createOpportunityRecord,
   printOpportunityRecord,
-} from "./opportunityLogger";
+} from "./opportunityLogger.js";
 
 const RPC_URL =
   process.env.SOLANA_RPC_URL ||
