@@ -21,7 +21,7 @@ console.log("Conectando a Solana...");
 
 connection.onLogs(
   METEORA_PROGRAM_ID,
-  async (logInfo) => {
+  async (logInfo, context) => {
     if (logInfo.err) {
       return;
     }
@@ -29,7 +29,7 @@ connection.onLogs(
     console.log("");
     console.log("🚨 ACTIVIDAD METEORA DETECTADA");
     console.log(`Firma: ${logInfo.signature}`);
-    console.log(`Slot: ${logInfo.context.slot}`);
+    console.log(`Slot: ${logInfo.slot}`);
     console.log("Analizando transacción...");
 
     try {
