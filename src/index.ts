@@ -1,6 +1,7 @@
 import {
   Connection,
   PublicKey,
+  ParsedConfirmedTransaction,
 } from "@solana/web3.js";
 
 const RPC_URL =
@@ -14,10 +15,146 @@ const METEORA_PROGRAM_ID = new PublicKey(
   "cpamdpZCGKuy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"
 );
 
+function formatNumber(value: number): string {
+  return Number.isFinite(value)
+    ? value.toLocaleString("en-US", {
+        maximumFractionDigits: 9,
+      })
+    : "N/A";
+}
+
+function analyzeTokenMovements(
+  transaction: ParsedConfirmedTransaction
+) {
+  const pre = transaction.meta?.preTokenBalances || [];
+  const post = transaction.meta?.postTokenBalances || [];
+
+  const movements = new Map<
+    string,
+    {
+      mint: string;
+      owner: string;
+      before: number;
+      after: number;
+    }
+  >();
+
+  for (const balance of pre) {
+    const key = `${balance.accountIndex}-${balance.mint}`;
+
+    movements.set(key, {
+      mint: balance.mint,
+      owner: balance.owner || "desconocido",
+      before: balance.uiTokenAmount.uiAmount || 0,
+      after: 0,
+    });
+  }
+
+  for (const balance of post) {
+    const key = `${balance.accountIndex}-${balance.mint}`;
+
+    const existing = movements.get(key);
+
+    if (existing) {
+      existing.after =
+        balance.uiTokenAmount.uiAmount || 0;
+      existing.owner =
+        balance.owner || existing.owner;
+    } else {
+      movements.set(key, {
+        mint: balance.mint,
+        owner: balance.owner || "desconocido",
+        before: 0,
+        after: balance.uiTokenAmount.uiAmount || 0,
+      });
+    }
+  }
+
+  console.log("");
+  console.log("🪙 MOVIMIENTOS DE TOKENS:");
+
+  let foundMovement = false;
+
+  for (const movement of movements.values()) {
+    const delta =
+      movement.after - movement.before;
+
+    if (Math.abs(delta) < 0.000000001) {
+      continue;
+    }
+
+    foundMovement = true;
+
+    const direction =
+      delta > 0 ? "🟢 RECIBIÓ" : "🔴 ENVIÓ";
+
+    console.log("");
+    console.log(direction);
+    console.log(`Mint: ${movement.mint}`);
+    console.log(`Owner: ${movement.owner}`);
+    console.log(
+      `Cantidad: ${formatNumber(Math.abs(delta))}`
+    );
+    console.log(
+      `Antes: ${formatNumber(movement.before)}`
+    );
+    console.log(
+      `Después: ${formatNumber(movement.after)}`
+    );
+  }
+
+  if (!foundMovement) {
+    console.log("No se detectaron movimientos de tokens.");
+  }
+}
+
+function analyzeSolMovements(
+  transaction: ParsedConfirmedTransaction
+) {
+  const meta = transaction.meta;
+
+  if (!meta) {
+    return;
+  }
+
+  const accountKeys =
+    transaction.transaction.message.accountKeys;
+
+  console.log("");
+  console.log("◎ MOVIMIENTOS DE SOL:");
+
+  for (let i = 0; i < accountKeys.length; i++) {
+    const before = meta.preBalances[i] || 0;
+    const after = meta.postBalances[i] || 0;
+
+    const deltaSol =
+      (after - before) / 1_000_000_000;
+
+    if (Math.abs(deltaSol) < 0.000001) {
+      continue;
+    }
+
+    const direction =
+      deltaSol > 0 ? "🟢 RECIBIÓ" : "🔴 ENVIÓ";
+
+    console.log("");
+    console.log(direction);
+    console.log(
+      `Cuenta: ${accountKeys[i].pubkey.toBase58()}`
+    );
+    console.log(
+      `Cambio SOL: ${formatNumber(Math.abs(deltaSol))}`
+    );
+  }
+}
+
 console.log("======================================");
-console.log("       SNIPER SOLANA BOT v0.3.0");
+console.log("       SNIPER SOLANA BOT v0.4.0");
 console.log("======================================");
 console.log("Conectando a Solana...");
+console.log("Modo: OBSERVACIÓN");
+console.log("Compra automática: DESACTIVADA");
+console.log("======================================");
 
 connection.onLogs(
   METEORA_PROGRAM_ID,
@@ -42,38 +179,33 @@ connection.onLogs(
         );
 
       if (!transaction) {
-        console.log("⚠️ No se pudo obtener la transacción.");
+        console.log(
+          "⚠️ No se pudo obtener la transacción."
+        );
         return;
       }
-
-      const accountKeys =
-        transaction.transaction.message.accountKeys;
 
       console.log("");
       console.log("📋 CUENTAS INVOLUCRADAS:");
 
-      for (const account of accountKeys) {
+      for (
+        const account of
+        transaction.transaction.message.accountKeys
+      ) {
         console.log(
           `- ${account.pubkey.toBase58()}`
         );
       }
 
-      console.log("");
-      console.log("📦 INSTRUCCIONES:");
-
-      for (const instruction of transaction.transaction.message
-        .instructions) {
-        if ("programId" in instruction) {
-          console.log(
-            `Programa: ${instruction.programId.toBase58()}`
-          );
-        }
-      }
+      analyzeTokenMovements(transaction);
+      analyzeSolMovements(transaction);
 
       console.log("");
-      console.log("🔎 Estado: OBSERVACIÓN");
-      console.log("💰 Compra automática: DESACTIVADA");
       console.log("======================================");
+      console.log("🔎 ESTADO: OBSERVACIÓN");
+      console.log("💰 COMPRA AUTOMÁTICA: DESACTIVADA");
+      console.log("======================================");
+
     } catch (error) {
       console.error(
         "❌ Error analizando transacción:",
