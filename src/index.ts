@@ -167,6 +167,40 @@ function identifyPoolCandidates(
       continue;
     }
 
+    // Solo las instrucciones que exponen cuentas directamente
+    if (!("accounts" in instruction)) {
+      continue;
+    }
+
+    for (const account of instruction.accounts) {
+      const address = account.toBase58();
+
+      if (seen.has(address)) {
+        continue;
+      }
+
+      seen.add(address);
+      candidates.push(account);
+    }
+  }
+
+  return candidates;
+}
+  const candidates: PublicKey[] = [];
+  const seen = new Set<string>();
+
+  for (
+    const instruction of
+    transaction.transaction.message.instructions
+  ) {
+    if (
+      !instruction.programId.equals(
+        METEORA_PROGRAM_ID
+      )
+    ) {
+      continue;
+    }
+
     for (const account of instruction.accounts) {
       const address = account.pubkey.toBase58();
 
