@@ -194,6 +194,78 @@ function identifyPoolCandidates(
 
   return candidates;
 }
+async function historicalTest() {
+  console.log("");
+  console.log("🧪 PRUEBA HISTÓRICA INICIADA");
+  console.log("Buscando actividad reciente de Meteora...");
+
+  try {
+    const signatures =
+      await connection.getSignaturesForAddress(
+        METEORA_PROGRAM_ID,
+        {
+          limit: 5,
+        }
+      );
+
+    console.log("");
+    console.log(
+      `📚 Transacciones encontradas: ${signatures.length}`
+    );
+
+    for (const item of signatures) {
+      console.log("");
+      console.log("🔎 Analizando:");
+      console.log(`Firma: ${item.signature}`);
+      console.log(`Slot: ${item.slot}`);
+
+      const transaction =
+        await connection.getParsedTransaction(
+          item.signature,
+          {
+            maxSupportedTransactionVersion: 0,
+          }
+        );
+
+      if (!transaction) {
+        console.log("⚪ No se pudo obtener la transacción.");
+        continue;
+      }
+
+      const poolCandidates =
+        identifyPoolCandidates(transaction);
+
+      console.log(
+        `🏊 Cuentas candidatas: ${poolCandidates.length}`
+      );
+
+      const record =
+        createOpportunityRecord({
+          slot: item.slot,
+          signature: item.signature,
+          strategy: "HISTORICAL_TEST",
+          decision: "WAIT",
+          reason:
+            poolCandidates.length > 0
+              ? "Actividad histórica con cuentas candidatas"
+              : "Actividad histórica sin cuentas candidatas",
+        });
+
+      await saveOpportunityRecord(record);
+      printOpportunityRecord(record);
+    }
+
+    console.log("");
+    console.log("✅ PRUEBA HISTÓRICA TERMINADA");
+  } catch (error) {
+    console.error(
+      "❌ Error en prueba histórica:",
+      error
+    );
+  }
+}
+
+await historicalTest();
 
 console.log("======================================");
 console.log("       SNIPER SOLANA BOT v0.5.1");
