@@ -24,3 +24,11 @@ jobs:
 
       - name: Ejecutar sniper en OBSERVACIÓN
         run: npm start
+
+      - name: Guardar registro de oportunidades
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: opportunities-log
+          path: opportunities.jsonl
+          if-no-files-found: warn
