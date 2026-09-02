@@ -7,6 +7,7 @@ import {
 import {
   createOpportunityRecord,
   printOpportunityRecord,
+  saveOpportunityRecord,
 } from "./opportunityLogger.js";
 
 const RPC_URL =
@@ -290,7 +291,7 @@ connection.onLogs(
               ? "Actividad Meteora con cuentas candidatas a Pool"
               : "Actividad Meteora sin Pool confirmada",
         });
-
+await saveOpportunityRecord(record);
       printOpportunityRecord(record);
 
       analyzeTokenMovements(
